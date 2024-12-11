@@ -4,6 +4,8 @@ import sys
 import select
 import multiprocessing
 
+from protocol import SCRMessage, MutableString
+
 class Server:
     def __init__(self, host_ip, host_port, max_workers=4):
         self.host_ip_ = host_ip

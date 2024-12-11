@@ -59,10 +59,13 @@ class SCRMessage:
         Returns the serialized message (length:content).
         """
         return f"{self.size_}:{self.content_}"
+    
+    def write(message, write, debug_mode = False):
+        write(SCRMessage(message).serialize().encode('utf-8'))
 
-    def deserialize(buffer, read, debug = False):
+    def read(buffer, read, debug_mode = False):
         """
-        Deserialize a message from the provided read function.
+        read a message from the provided read function.
         This function reads the size of the message first, and then the content.
         
         The `read` function should return data in chunks, and should be callable.
@@ -72,29 +75,32 @@ class SCRMessage:
         read (function): A function that returns the next chunk of data from the socket.
 
         Returns:
-        str: The deserialized content of the message.
+        str: The readd content of the message.
         """
         
-        if debug:
-            print(f"[SCRMessage::deserialize] The input buffer is {buffer}")
+        if debug_mode:
+            print(f"[SCRMessage::read] The input buffer is {buffer}")
 
         # Step 1: Read the size header (which ends with a colon ":")
         while ':' not in buffer:
             chunk = read()  # read one chunk
-
-            if debug:
-                print(f"[SCRMessage::deserialize] chunk is {chunk}")
-
-            if not chunk:
-                raise ValueError("No data received, unable to read size.")
+            # if not chunk:
+            #     if debug_mode:
+            #         print("not chunk")
+            #     return ""
             buffer += chunk.decode('utf-8')
+            if debug_mode:
+                print(f"[SCRMessage::read] chunk is {chunk}, buffer is {buffer}")
         
-        if debug:
-            print(f"[SCRMessage::deserialize] After receiving colon, buffer is {buffer}")
+        if debug_mode:
+            print(f"[SCRMessage::read] After receiving colon, buffer is {buffer}")
             
         size_str, remainder = str(buffer).split(":", 1)
         message_size = int(size_str)
         buffer.assign(remainder)
+
+        if debug_mode:
+            print(f"message_size is {message_size}")
 
         # Step 2: Read the message content based on the size
         while len(buffer) < message_size:
@@ -103,13 +109,13 @@ class SCRMessage:
                 raise ValueError("Insufficient data received, expected more content.")
             buffer += chunk.decode('utf-8')
 
-        if debug:
-            print(f"[SCRMessage::deserialize] before slicing, buffer is {buffer}")
+        if debug_mode:
+            print(f"[SCRMessage::read] before slicing, buffer is {buffer}")
 
         content = str(buffer)[:message_size]
         buffer.assign(str(buffer)[message_size:])
 
-        if debug:
-            print(f"[SCRMessage::deserialize] After slicing, buffer is {buffer}")
+        if debug_mode:
+            print(f"[SCRMessage::read] After slicing, buffer is {buffer}")
 
         return content

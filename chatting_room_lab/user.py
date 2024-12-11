@@ -5,15 +5,25 @@ import fcntl
 import os
 import select
 
+from protocol import SCRMessage, MutableString
+
 class Client:
-    def __init__(self, username, SERVER_HOST='10.0.0.4', SERVER_PORT=8080):
+    def __init__(self, username, SERVER_HOST='10.0.0.4', SERVER_PORT=8080, debug_mode = False):
         self.username = username
         self.SERVER_HOST = SERVER_HOST
         self.SERVER_PORT = SERVER_PORT
+        self.recv_buffer_ = MutableString()
+        self.debug_mode_ = debug_mode
 
     def start(self):
+        if self.debug_mode_:
+            print("[Client::start] Beginning of start")
+        
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client_socket.connect((self.SERVER_HOST, self.SERVER_PORT))
+
+        if self.debug_mode_:
+            print("[Client::start] Successfully calling connect")
         
         client_socket.setblocking(False)
         # Set the client socket to be non-blocking
@@ -24,9 +34,13 @@ class Client:
         # the file descriptor to get the input from the terminal
         # Also set to non-blocking
 
-        # Send the username to the server after the connection is established
-        client_socket.send(self.username.encode('utf-8'))
+        def write(message):
+            client_socket.send(message)
+        SCRMessage.write(self.username, write)
         print(f"Sent username: {self.username}")
+
+        def read():
+            return client_socket.recv(1024).decode('utf-8')
 
         try:
             while True:
@@ -36,12 +50,12 @@ class Client:
 
                 for sock in readable:
                     if sock == client_socket:
-                        try:
-                            message = client_socket.recv(1024).decode('utf-8')
+                        while True:
+                            message = SCRMessage.read(self.recv_buffer_, read)
                             if message:
                                 print(f"{message}")
-                        except BlockingIOError:
-                            pass  
+                            else:
+                                break
 
                     elif sock == stdin_fd:
                         try:
