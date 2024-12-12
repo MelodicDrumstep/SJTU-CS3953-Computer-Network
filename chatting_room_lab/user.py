@@ -8,12 +8,14 @@ import select
 from protocol import SCRMessage, MutableString
 
 class Client:
-    def __init__(self, username, SERVER_HOST='10.0.0.4', SERVER_PORT=8080, debug_mode = False):
+    def __init__(self, username, SERVER_HOST = '10.0.0.4', SERVER_PORT = 8080, debug_mode = False):
         self.username = username
         self.SERVER_HOST = SERVER_HOST
         self.SERVER_PORT = SERVER_PORT
         self.recv_buffer_ = MutableString()
         self.debug_mode_ = debug_mode
+        if self.debug_mode_:
+            print("[Client::__init__] Finish construction")
 
     def start(self):
         if self.debug_mode_:
@@ -40,7 +42,7 @@ class Client:
         print(f"Sent username: {self.username}")
 
         def read():
-            return client_socket.recv(1024).decode('utf-8')
+            return client_socket.recv(1024)
 
         try:
             while True:
@@ -53,7 +55,7 @@ class Client:
                         while True:
                             message = SCRMessage.read(self.recv_buffer_, read)
                             if message:
-                                print(f"{message}")
+                                print(f"[Client::read] Received message : {message}")
                             else:
                                 break
 
@@ -66,7 +68,7 @@ class Client:
                                     client_socket.close()
                                     print("Exiting...")
                                     return
-                                client_socket.send(message.encode('utf-8'))
+                                SCRMessage.write(message, write)
                         except IOError:
                             pass 
         except KeyboardInterrupt:

@@ -83,37 +83,40 @@ class SCRMessage:
 
         # Step 1: Read the size header (which ends with a colon ":")
         while ':' not in buffer:
-            chunk = read()  # read one chunk
-            # if not chunk:
-            #     if debug_mode:
-            #         print("not chunk")
-            #     return ""
-            buffer += chunk.decode('utf-8')
-            if debug_mode:
-                print(f"[SCRMessage::read] chunk is {chunk}, buffer is {buffer}")
+            try:
+                chunk = read()  # read one chunk
+                if not chunk:
+                    if debug_mode:
+                        print("not chunk")
+                    return ""
+                buffer += chunk.decode('utf-8')
+                if debug_mode:
+                    print(f"[SCRMessage::read] chunk is {chunk}, buffer is {buffer}")
+            except BlockingIOError:
+                print("[SCRMessage::read] BlockingIOError")
+                return ""
         
         if debug_mode:
             print(f"[SCRMessage::read] After receiving colon, buffer is {buffer}")
-            
+
         size_str, remainder = str(buffer).split(":", 1)
         message_size = int(size_str)
-        buffer.assign(remainder)
-
-        if debug_mode:
-            print(f"message_size is {message_size}")
 
         # Step 2: Read the message content based on the size
         while len(buffer) < message_size:
-            chunk = read()
-            if not chunk:
-                raise ValueError("Insufficient data received, expected more content.")
-            buffer += chunk.decode('utf-8')
+            try:
+                chunk = read()
+                if not chunk:
+                    raise ValueError("Insufficient data received, expected more content.")
+                buffer += chunk.decode('utf-8')
+            except BlockingIOError:
+                return ""
 
         if debug_mode:
             print(f"[SCRMessage::read] before slicing, buffer is {buffer}")
 
-        content = str(buffer)[:message_size]
-        buffer.assign(str(buffer)[message_size:])
+        content = remainder[:message_size]
+        buffer.assign(remainder[message_size:])
 
         if debug_mode:
             print(f"[SCRMessage::read] After slicing, buffer is {buffer}")
