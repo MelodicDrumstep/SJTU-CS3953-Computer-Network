@@ -2,7 +2,8 @@ import pytest
 import sys
 import os
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.join(os.path.dirname(__file__), '../utils/'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from protocol import SCRMessage, MutableString
 
@@ -36,6 +37,6 @@ def test_protocol():
 
     # Simulating receiving a message
     for i in range(5):
-        content = SCRMessage.deserialize(buffer, read_function, True)
+        content = SCRMessage.read(buffer, read_function, True)
         print(f"Received message: {content}")
         print(f"After one turn, buffer becomes {buffer}")

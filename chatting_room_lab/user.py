@@ -5,32 +5,33 @@ import fcntl
 import os
 import select
 
+sys.path.append(os.path.join(os.path.dirname(__file__), 'utils'))
 from protocol import SCRMessage, MutableString
 
-class Client:
-    def __init__(self, username, SERVER_HOST = '10.0.0.4', SERVER_PORT = 8080, debug_mode = False):
+class TCPClient:
+    def __init__(self, username, SERVER_HOST = '127.0.0.1', SERVER_PORT = 12345, debug_mode = False):
         self.username = username
         self.SERVER_HOST = SERVER_HOST
         self.SERVER_PORT = SERVER_PORT
         self.recv_buffer_ = MutableString()
         self.debug_mode_ = debug_mode
         if self.debug_mode_:
-            print("[Client::__init__] Finish construction")
+            print("[TCPClient::__init__] Finish construction")
 
     def start(self):
         if self.debug_mode_:
-            print("[Client::start] Beginning of start")
+            print("[TCPClient::start] Beginning of start")
         
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client_socket.connect((self.SERVER_HOST, self.SERVER_PORT))
 
         if self.debug_mode_:
-            print("[Client::start] Successfully calling connect")
+            print("[TCPClient::start] Successfully calling connect")
         
         client_socket.setblocking(False)
         # Set the client socket to be non-blocking
 
-        stdin_fd = sys.stdin.fileno()
+        stdin_fd = sys.stdin.fileno()       
         old_flags = fcntl.fcntl(stdin_fd, fcntl.F_GETFL)
         fcntl.fcntl(stdin_fd, fcntl.F_SETFL, old_flags | os.O_NONBLOCK)
         # the file descriptor to get the input from the terminal
@@ -52,10 +53,13 @@ class Client:
 
                 for sock in readable:
                     if sock == client_socket:
+                        if self.debug_mode_:
+                            print("[TCPClient::Start] client socket readable")
+
                         while True:
                             message = SCRMessage.read(self.recv_buffer_, read)
                             if message:
-                                print(f"[Client::read] Received message : {message}")
+                                print(f"[TCPClient::read] Received message : {message}")
                             else:
                                 break
 
@@ -71,6 +75,7 @@ class Client:
                                 SCRMessage.write(message, write)
                         except IOError:
                             pass 
+
         except KeyboardInterrupt:
             print("\nCaught KeyboardInterrupt. Closing socket...")
         finally:
@@ -79,4 +84,4 @@ class Client:
 
 if __name__ == "__main__":
     username = input("Enter your username: ")  # User enters their username
-    Client(username=username).start()
+    TCPClient(username = username, debug_mode = True).start()

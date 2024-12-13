@@ -5,7 +5,8 @@ import sys
 import os
 import time
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.join(os.path.dirname(__file__), '../utils/'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from protocol import SCRMessage, MutableString
 from user import Client 
@@ -87,3 +88,6 @@ def test_client_connection():
 
     # Cleanup
     client_thread.join(timeout=5)
+
+if __name__ == "__main__":
+    test_client_connection()

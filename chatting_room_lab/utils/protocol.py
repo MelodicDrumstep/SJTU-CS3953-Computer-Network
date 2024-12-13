@@ -100,7 +100,7 @@ class SCRMessage:
             print(f"[SCRMessage::read] After receiving colon, buffer is {buffer}")
 
         size_str, remainder = str(buffer).split(":", 1)
-        message_size = int(size_str)
+        message_size = int(size_str) + len(size_str) + 1
 
         # Step 2: Read the message content based on the size
         while len(buffer) < message_size:
@@ -114,9 +114,11 @@ class SCRMessage:
 
         if debug_mode:
             print(f"[SCRMessage::read] before slicing, buffer is {buffer}")
+            print(f"[SCRMessage::read] message_size is {message_size}")
 
-        content = remainder[:message_size]
-        buffer.assign(remainder[message_size:])
+        content = str(buffer)[:message_size]
+        _, content = content.split(':', 1)
+        buffer.assign(str(buffer)[message_size:])
 
         if debug_mode:
             print(f"[SCRMessage::read] After slicing, buffer is {buffer}")
