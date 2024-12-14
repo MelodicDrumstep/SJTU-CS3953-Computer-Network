@@ -1,4 +1,10 @@
+import logging
+
 class MutableString:
+    """
+    Since python does not support mutable string by language default,
+    I implement this MutableString class to store a mutable string (using list as the backend)
+    """
     def __init__(self, string = ""):
         self.string_ = list(string)
 
@@ -47,57 +53,63 @@ class MutableString:
 
 class SCRMessage:
     """
-    SCR is for simple chatting room
+    This class implements a customized application level protocol: SCR protocol
+    (SCR is for Simple Chatting Room)
+    Currently this protocol is a minimal one : the header only contains the size of the message
+    And it's used for preventing TCP packets concatenation
     """
     def __init__(self, content):
-        self.content_ = content
         self.size_ = len(content)
+        self.content_ = content
 
-    def serialize(self):
+    def pack(self):
         """
-        Serialize the message by adding a length header followed by the content.
-        Returns the serialized message (length:content).
+        Pack the message by adding a length header followed by the content.
+        Returns the packd message (length:content).
         """
         return f"{self.size_}:{self.content_}"
     
-    def write(message, write, debug_mode = False):
-        write(SCRMessage(message).serialize().encode('utf-8'))
-
-    def read(buffer, read, debug_mode = False):
+    def write(message, write):
         """
-        read a message from the provided read function.
+        Write the message using the provided write function.
+        It will do SCRMessage packing and encoding
+        """
+        write(SCRMessage(message).pack().encode('utf-8'))
+
+    def read(buffer, read):
+        """
+        Read a message using the provided read function. 
+        And it uses the provided buffer to store some redundant message parts
+        (Due to TCP streaming feature, and due to non-blocking network programming,
+        we may receive a part of the next message, and we don't want to lose it
+        for the next turn, therefore we have to store it in a reusable buffer)
+
         This function reads the size of the message first, and then the content.
-        
-        The `read` function should return data in chunks, and should be callable.
-        It will be repeatedly called until the entire message is read.
+        This prevents TCP packets concatenation.
 
         Args:
         read (function): A function that returns the next chunk of data from the socket.
+        Non-blocking read function supported.
 
         Returns:
-        str: The readd content of the message.
+        str: The content of the message.
         """
         
-        if debug_mode:
-            print(f"[SCRMessage::read] The input buffer is {buffer}")
+        logging.debug(f"[SCRMessage::read] The input buffer is {buffer}")
 
         # Step 1: Read the size header (which ends with a colon ":")
         while ':' not in buffer:
             try:
                 chunk = read()  # read one chunk
                 if not chunk:
-                    if debug_mode:
-                        print("not chunk")
                     return ""
                 buffer += chunk.decode('utf-8')
-                if debug_mode:
-                    print(f"[SCRMessage::read] chunk is {chunk}, buffer is {buffer}")
+                logging.debug(f"[SCRMessage::read] chunk is {chunk}, buffer is {buffer}")
             except BlockingIOError:
-                print("[SCRMessage::read] BlockingIOError")
+                logging.error("[SCRMessage::read] BlockingIOError")
                 return ""
         
-        if debug_mode:
-            print(f"[SCRMessage::read] After receiving colon, buffer is {buffer}")
+        logging.debug(f"[SCRMessage::read] After receiving colon, buffer is {buffer}")
 
         size_str, remainder = str(buffer).split(":", 1)
         message_size = int(size_str) + len(size_str) + 1
@@ -112,15 +124,13 @@ class SCRMessage:
             except BlockingIOError:
                 return ""
 
-        if debug_mode:
-            print(f"[SCRMessage::read] before slicing, buffer is {buffer}")
-            print(f"[SCRMessage::read] message_size is {message_size}")
+        logging.debug(f"[SCRMessage::read] before slicing, buffer is {buffer}")
+        logging.debug(f"[SCRMessage::read] message_size is {message_size}")
 
         content = str(buffer)[:message_size]
         _, content = content.split(':', 1)
         buffer.assign(str(buffer)[message_size:])
 
-        if debug_mode:
-            print(f"[SCRMessage::read] After slicing, buffer is {buffer}")
+        logging.debug(f"[SCRMessage::read] After slicing, buffer is {buffer}")
 
         return content
