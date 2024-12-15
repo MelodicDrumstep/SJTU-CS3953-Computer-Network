@@ -106,7 +106,7 @@ class SCRMessage:
                 buffer += chunk.decode('utf-8')
                 logging.debug(f"[SCRMessage::read] chunk is {chunk}, buffer is {buffer}")
             except BlockingIOError:
-                logging.error("[SCRMessage::read] BlockingIOError")
+                logging.debug("[SCRMessage::read] BlockingIOError")
                 return ""
         
         logging.debug(f"[SCRMessage::read] After receiving colon, buffer is {buffer}")

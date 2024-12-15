@@ -19,7 +19,7 @@ class UDPClient:
     Once it's launched, the user can send messages to the broadcast address,
     and also listen to messages from the broadcast address.
     """
-    def __init__(self, broadcast_ip='224.0.0.1', broadcast_port=12345):
+    def __init__(self, broadcast_ip='10.255.255.255', broadcast_port=12345):
         self.broadcast_ip_ = broadcast_ip
         self.broadcast_port_ = broadcast_port
         self.recv_buffer_ = MutableString()
@@ -39,11 +39,6 @@ class UDPClient:
         recv_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)  # Set TTL for multicast
         recv_socket.bind(('', self.broadcast_port_))  # Bind to the specified multicast port
         recv_socket.setblocking(False)
-
-        # Join the multicast group
-        group = socket.inet_aton(self.broadcast_ip_)
-        mreq = struct.pack('4sL', group, socket.INADDR_ANY)
-        recv_socket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 
         stdin_fd = sys.stdin.fileno()       
         old_flags = fcntl.fcntl(stdin_fd, fcntl.F_GETFL)

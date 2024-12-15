@@ -5,7 +5,7 @@ import select
 import multiprocessing
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 sys.path.append(os.path.join(os.path.dirname(__file__), 'utils'))
 from protocol import SCRMessage, MutableString
 from PCHashMap import ProcessSafeHashMap
@@ -20,6 +20,7 @@ class TCPServer:
         self.num_workers_ = num_workers
         self.client_name2socket_ = ProcessSafeHashMap()
         self.client_fd2name_ = ProcessSafeHashMap()
+        self.clients_ = []
 
     def onConnection(self, server_socket, epoll):
         """Handle incoming connection requests."""
@@ -35,6 +36,7 @@ class TCPServer:
         try:
             username = self.receive_username(client_socket)
             if username:
+                self.clients_.append(client_socket)
                 self.client_name2socket_.put(username, client_socket)
                 self.client_fd2name_.put(client_socket.fileno(), username)
 
@@ -56,12 +58,13 @@ class TCPServer:
         except BlockingIOError:
             return None
         
-    def removeClient(self, epoll, fileno):
-        epoll.unregister(fileno)
-        client_name = self.client_fd2name_.get(fileno)
-        self.client_name2socket_.get(client_name).close()
-        self.client_name2socket_.remove(client_name)
-        self.client_fd2name_.remove(fileno)
+    @staticmethod
+    def removeClient(fileno, client_name2socket, client_fd2name):
+        client_name = client_fd2name.get(fileno)
+        logging.debug(f"[TCPServer::removeClient] removing client {client_name}")
+        client_name2socket.get(client_name).close()
+        client_name2socket.remove(client_name)
+        client_fd2name.remove(fileno)
 
     @staticmethod
     def worker(queue, client_name2socket, client_fd2name):
@@ -80,6 +83,10 @@ class TCPServer:
                     if message == "":
                         break
                     logging.debug(f"[worker] received message is {message}")
+
+                    if message == "EXIT":
+                        TCPServer.removeClient(fileno, client_name2socket, client_fd2name)
+                        break
 
                     def parse_message(message):
                         if not message.startswith("To "):
@@ -109,13 +116,11 @@ class TCPServer:
                         SCRMessage.write("Format error. The format should be \'To XXX:MMMM\'", write_fallback)
                         continue 
 
-                    logging.debug(f"[TCPServer::worker] target_name is {target_name}, msg_content is {message_content}")
-                    
                     target_socket = client_name2socket.get(target_name)
-
                     logging.debug(f"[TCPServer::worker] sender_name is {client_name}, the IP used for searching is {client_socket.getpeername()}")
 
                     if target_socket is not None:
+                        logging.debug(f"[TCPServer::worker] target_name is {target_name}, msg_content is {message_content}, target_IP is {target_socket.getpeername()}")
                         SCRMessage.write(message_content + " From " + client_name, write)
                     else:
                         SCRMessage.write("The target user cannot be reached.", write_fallback)
@@ -151,13 +156,14 @@ class TCPServer:
                 # Therefore we have to handle EPOLLHUP / EPOLLERR first
                 elif event & (select.EPOLLHUP | select.EPOLLERR):
                     logging.debug("[TCPServer::start] Connection closed by peer or error occurred")
-                    self.removeClient(epoll, fileno)
+                    TCPServer.removeClient(fileno, self.client_name2socket_, self.client_fd2name_)
                 elif event & select.EPOLLIN:
+                    logging.debug(f"[TCPServer::start] Readable event, fileno is {fileno}")
                     try:
                         queue.put(fileno)
                     except OSError as e:
                         logging.error(f"Error creating socket from file descriptor: {e}")
 
 if __name__ == "__main__":
-    server = TCPServer('127.0.0.1', 12345)
+    server = TCPServer(host_ip = "10.0.0.4", host_port = 12345, num_workers = 1)
     server.start()
