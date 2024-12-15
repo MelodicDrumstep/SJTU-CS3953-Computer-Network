@@ -10,7 +10,7 @@ Since I am using Python 3 for development, the program needs to be launched with
 
 The code for this part is implemented in [server.py](server.py), with detailed comments provided.
 
-<img src="images/TCPServer.svg" alt="TCPServer" width="50%">
+<img src="images/TCPServer.svg" alt="TCPServer" width="70%">
 
 #### Multi-Processing Reactor Pattern + Non-blocking IO
 
@@ -54,7 +54,7 @@ The server will listen for `EPOLLHUP / EPOLLERROR` events on the client socket a
 
 The code for this part is implemented in [user.py](user.py), with detailed comments provided.
 
-<img src="images/TCPClient.svg" alt="TCPClient" width="50%">
+<img src="images/TCPClient.svg" alt="TCPClient" width="70%">
 
 #### IO Multiplexing
 
@@ -103,7 +103,7 @@ python server.py
 
 ### Overview of UDP Broadcast Implementation
 
-<img src="images/UDPClient.svg" alt="UDPClient" width="50%">
+<img src="images/UDPClient.svg" alt="UDPClient" width="70%">
 
 #### IO Multiplexing
 
