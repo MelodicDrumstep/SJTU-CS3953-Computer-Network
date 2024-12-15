@@ -1,5 +1,3 @@
-# ignore all pdf files
-**/*.pdf
 
 # ignore all pycache 
 **/__pycache__/

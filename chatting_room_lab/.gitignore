@@ -1,0 +1,13 @@
+# ignore latex files
+**/*.tex
+**/*.out
+**/*.aux
+
+# ignore logs
+**/*.log
+
+# ignore lab report pdf
+*_Lab3.pdf
+
+# ignore zip files
+**/*.zip
